@@ -19,7 +19,7 @@ def calculate(p):
         for idx_d, d in enumerate(dates_in_project):
             day_cost = 0
             if len(dates_in_project) == 1:
-                day_cost = p['full_day_rate'] 
+                cost_of_project = p['full_day_rate'] 
                 continue
                 
             if d in days_costed:
@@ -72,7 +72,6 @@ def calculate(p):
                 day_cost = p['full_day_rate'] 
 
             cost_of_project += day_cost
-            days_costed.add(d)
 
         p["cost"] = cost_of_project
     return projects
@@ -92,11 +91,42 @@ class TestReimbursementCalculator(unittest.TestCase):
             "start_date": date(2015,9,2),
             "end_date": date(2015,9,4)
         }
-        #costed_out = calculate([p])
-        #self.assertEqual(p["travel_day_rate"]*2 + p["full_day_rate"],
-        #                 costed_out[0]["cost"], msg="test_single_project failed")
+        costed_out = calculate([p])
+        self.assertEqual(p["travel_day_rate"]*2 + p["full_day_rate"],
+                         costed_out[0]["cost"], msg="test_single_project failed")
 
-    def test_set_2(self):
+    def test_single_day_is_counted_as_full_day(self):
+        p1 = {
+            "travel_day_rate": 45,
+            "full_day_rate": 75, 
+            "start_date": date(2015,9,1),
+            "end_date": date(2015,9,1),
+            "expected_cost": 75
+        }
+        p = calculate([p1])[0]
+        self.assertEqual(75, p["cost"])
+
+    def test_overlapping_days_are_full_days(self):
+        p1 = {
+            "travel_day_rate": 45,
+            "full_day_rate": 75, 
+            "start_date": date(2015,9,1),
+            "end_date": date(2015,9,2),
+            "expected_cost": 45 + 75
+        }
+        p2 = {
+            "travel_day_rate": 45,
+            "full_day_rate": 75, 
+            "start_date": date(2015,9,2),
+            "end_date": date(2015,9,4),
+            "expected_cost": 75 + 75 + 45
+        }
+        px,py = calculate([p1,p2])
+        self.assertEqual(p1['expected_cost'], px['cost'])
+        self.assertEqual(p2['expected_cost'], py['cost'])
+
+
+    def test_set1(self):
         p1 = {
             "travel_day_rate": 45,
             "full_day_rate": 75, 
@@ -119,8 +149,8 @@ class TestReimbursementCalculator(unittest.TestCase):
             "expected_cost": 45 + 75 + 45
         }
         projects = [p1,p2,p3]
-        projects_with_costs = calculate(projects)
-        for idx,p in enumerate(projects_with_costs):
+        
+        for idx,p in enumerate(calculate(projects)):
             expected_cost = projects[idx]["expected_cost"]
             actual_cost = p["cost"]
             self.assertEqual(expected_cost, actual_cost,
